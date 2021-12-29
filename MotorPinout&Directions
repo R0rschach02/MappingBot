@@ -1,0 +1,177 @@
+const int L1=15, L2=2, L_enable=0, R1=4, R2=16, R_enable=17;
+
+  //PWM setup:
+  const int kanal0 = 0;
+  const int freq = 50;
+  const int resolution = 8;
+
+  //kanal1 ist für den rechten motor:
+  const int kanal1 = 1;
+
+
+
+void setup() 
+{
+  pinMode(L1, OUTPUT);  //alles output
+  pinMode(L2, OUTPUT);  //alles output
+  pinMode(L_enable, OUTPUT);  //alles output
+  pinMode(R1, OUTPUT);  //alles output
+  pinMode(R2, OUTPUT);  //alles output
+  pinMode(R_enable, OUTPUT);  //alles output
+
+    //PWM für linken motor
+  ledcSetup(kanal0, freq, resolution);
+  ledcAttachPin(L_enable, kanal0);
+  ledcWrite(kanal0, 100);
+
+  //PWM für rechten motor
+  ledcSetup(kanal1, freq, resolution);
+  ledcAttachPin(R_enable, kanal0);
+  ledcWrite(kanal1, 100);
+
+}
+
+void loop() 
+{
+  Forward();
+  delay(1000);
+  Backward();
+  delay(1000);
+  Stop();
+  delay(1000);
+  RechtsKurve();
+  delay(1000);
+  LinksKurve();
+  delay(1000);
+  Rollen();
+  delay(1000);
+  LinksDrehen();
+  delay(1000);
+  RechtsDrehen();
+  delay(1000);
+  RechtsKurveHinten();
+  delay(1000);
+  LinksKurveHinten();
+  delay(1000);
+}
+
+void RechtsKurveHinten() //Uhrzeigersinn umgedreht wäre es gegen den Uhrzeigersinn
+{
+  LinkesRadStop();
+  RechtesRadBackward();
+}
+
+void LinksKurveHinten()
+{
+  LinkesRadBackward();
+  RechtesRadStop();
+}
+
+void RechtsDrehen()
+{
+  RechtesRadBackward();
+  LinkesRadForward();
+}
+
+void LinksDrehen()
+{
+  RechtesRadForward();
+  LinkesRadBackward();
+}
+
+void LinksKurve()
+{
+  RechtesRadForward();
+  LinkesRadStop();
+}
+void RechtsKurve()
+{
+  RechtesRadStop();
+  LinkesRadForward();
+}
+
+void Rollen()
+{
+  RechtesRadRollen();
+  LinkesRadRollen();
+}
+
+void RechtesRadRollen()
+{
+  //digitalWrite(R_enable,LOW);
+  ledcWrite(kanal0, 100); //kanal0 ist für den Rechten Motor und kanal1 für den Linken Motor.
+  digitalWrite(R1,LOW);
+  digitalWrite(R2,LOW);
+}
+
+void LinkesRadRollen()
+{
+  //digitalWrite(L_enable,LOW);
+  ledcWrite(kanal1, 100);
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,LOW);
+}
+
+void Stop()
+{
+  LinkesRadStop();
+  RechtesRadStop();
+}
+
+void LinkesRadStop()
+{
+  digitalWrite(L_enable,HIGH);
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,LOW);
+}
+
+void RechtesRadStop()
+{
+  digitalWrite(R_enable,HIGH);
+  digitalWrite(R1,LOW);
+  digitalWrite(R2,LOW);
+}
+
+void Backward()
+{
+  LinkesRadBackward();
+  RechtesRadBackward();
+}
+
+void Forward()
+{
+  LinkesRadForward();
+  RechtesRadForward();
+}
+
+void LinkesRadForward()
+{
+  //digitalWrite(L_enable,HIGH);
+  ledcWrite(kanal0, 150); 
+  digitalWrite(L1,HIGH);
+  digitalWrite(L2,LOW);
+}
+
+void LinkesRadBackward()
+{
+  //digitalWrite(L_enable,HIGH);
+  ledcWrite(kanal0, 150); 
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,HIGH);
+}
+
+void RechtesRadForward()
+{
+  //digitalWrite(R_enable,HIGH);
+  ledcWrite(kanal1, 150); 
+  digitalWrite(R1,LOW);
+  digitalWrite(R2,HIGH);
+}
+
+void RechtesRadBackward()
+{
+  //digitalWrite(R_enable,HIGH);
+  ledcWrite(kanal1, 150); 
+  digitalWrite(R1,HIGH);
+  digitalWrite(R2,LOW);
+}
