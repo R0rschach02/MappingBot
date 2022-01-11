@@ -1,0 +1,54 @@
+#include <Arduino.h>     // every sketch needs this
+#include <Wire.h>        // instantiate the Wire library
+#include <TFLI2C.h>      // TFLuna-I2C Library v.0.2.0
+
+TFLI2C tflI2C;
+
+int16_t  tfDist;    // distance in centimeters
+int16_t  tfAddr = TFL_DEF_ADR;  // use this default I2C address or
+                                // set variable to your own value
+
+                                
+void setup()
+{
+    Wire.begin();           // initialize Wire library
+    //delay(500);
+    Serial.begin( 115200);  // initialize serial port    
+    Serial.println( "TFLI2C example code simplified"); // say "Hello!"
+    Serial.println( "4 NOV 2021");                     // and add date
+}
+
+void loop()
+{ 
+     
+    if( tflI2C.getData( tfDist, tfAddr)) // If read okay...
+    {  
+      int16_t tfDistArray[16]; 
+      int16_t maxIndex = 0;  // -1 
+      int16_t maxValue = 0;
+    
+        for( int16_t i = 0; i < 16; i++)    
+        {
+          tfDistArray[i] = tfDist;
+          maxIndex++;                                                                                                                                   
+          
+           if ( tfDistArray[maxIndex] > tfDistArray[i])  
+            {
+               maxValue = tfDistArray[maxIndex];
+               maxIndex = i;
+            }
+                       
+        }
+
+        Serial.print("Current distance: ");
+        Serial.println(tfDist);
+
+        if ( maxValue > 0 )
+        {
+        Serial.print("Biggest distance: ");
+        Serial.println(maxValue);
+        }           
+    }
+    
+    delay(1000);
+}
