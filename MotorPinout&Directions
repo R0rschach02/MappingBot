@@ -1,4 +1,4 @@
-const int L1=15, L2=2, L_enable=0, R1=4, R2=16, R_enable=17;
+const int L1=2, L2=0, L_enable=15, R1=16, R2=4, R_enable=17;
 
   //PWM setup:
   const int kanal0 = 0;
@@ -22,37 +22,38 @@ void setup()
     //PWM für linken motor
   ledcSetup(kanal0, freq, resolution);
   ledcAttachPin(L_enable, kanal0);
-  ledcWrite(kanal0, 100);
+  //ledcWrite(kanal0, 100);
 
   //PWM für rechten motor
   ledcSetup(kanal1, freq, resolution);
-  ledcAttachPin(R_enable, kanal0);
-  ledcWrite(kanal1, 100);
+  ledcAttachPin(R_enable, kanal1);
+  //ledcWrite(kanal1, 100);
 
 }
 
 void loop() 
 {
   Forward();
-  delay(1000);
+  delay(1500);
   Backward();
-  delay(1000);
+  delay(1500);
   Stop();
-  delay(1000);
+  delay(1500);
   RechtsKurve();
-  delay(1000);
+  delay(1500);
   LinksKurve();
-  delay(1000);
+  delay(1500);
   Rollen();
-  delay(1000);
+  delay(1500);
   LinksDrehen();
-  delay(1000);
+  delay(1500);
   RechtsDrehen();
-  delay(1000);
+  delay(1500);
   RechtsKurveHinten();
-  delay(1000);
+  delay(1500);
   LinksKurveHinten();
-  delay(1000);
+  delay(1500);
+  
 }
 
 void RechtsKurveHinten() //Uhrzeigersinn umgedreht wäre es gegen den Uhrzeigersinn
@@ -99,7 +100,7 @@ void Rollen()
 void RechtesRadRollen()
 {
   //digitalWrite(R_enable,LOW);
-  ledcWrite(kanal0, 100); //kanal0 ist für den Rechten Motor und kanal1 für den Linken Motor.
+  ledcWrite(kanal0, 60); //kanal0 ist für den Rechten Motor und kanal1 für den Linken Motor.
   digitalWrite(R1,LOW);
   digitalWrite(R2,LOW);
 }
@@ -107,7 +108,7 @@ void RechtesRadRollen()
 void LinkesRadRollen()
 {
   //digitalWrite(L_enable,LOW);
-  ledcWrite(kanal1, 100);
+  ledcWrite(kanal1, 60);
   digitalWrite(L1,LOW);
   digitalWrite(L2,LOW);
 }
@@ -147,23 +148,23 @@ void Forward()
 void LinkesRadForward()
 {
   //digitalWrite(L_enable,HIGH);
-  ledcWrite(kanal0, 150); 
-  digitalWrite(L1,HIGH);
-  digitalWrite(L2,LOW);
+  ledcWrite(kanal0, 60); 
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,HIGH);
 }
 
 void LinkesRadBackward()
 {
   //digitalWrite(L_enable,HIGH);
-  ledcWrite(kanal0, 150); 
-  digitalWrite(L1,LOW);
-  digitalWrite(L2,HIGH);
+  ledcWrite(kanal0, 60); 
+  digitalWrite(L1,HIGH);
+  digitalWrite(L2,LOW);
 }
 
 void RechtesRadForward()
 {
   //digitalWrite(R_enable,HIGH);
-  ledcWrite(kanal1, 150); 
+  ledcWrite(kanal1, 60); 
   digitalWrite(R1,LOW);
   digitalWrite(R2,HIGH);
 }
@@ -171,7 +172,7 @@ void RechtesRadForward()
 void RechtesRadBackward()
 {
   //digitalWrite(R_enable,HIGH);
-  ledcWrite(kanal1, 150); 
+  ledcWrite(kanal1, 60); 
   digitalWrite(R1,HIGH);
   digitalWrite(R2,LOW);
 }
