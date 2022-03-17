@@ -3,13 +3,8 @@
 Servo servoY;
 Servo servoX;
 
-const int servoPinY = 25;
+const int servoPinY = 19;
 const int servoPinX = 26;
-
-boolean forwardX= true; 
-boolean forwardY= true; 
-
-byte posX = 0;
 
 void setup() 
 {
@@ -30,7 +25,7 @@ void setup()
   servoY.setPeriodHertz(50);
   servoY.attach(servoPinY, 1500, 2500);
 
-  servoY.write(90);
+  servoY.write(150); // 90° ist der Mittelpunkt vom Y servo, 115 ist der max wert. 
 
   delay(2000);
 }
@@ -43,7 +38,7 @@ void radarFSM_Advanced()
   static boolean backwardX= true; 
   static boolean backwardY= true; 
   
-  static byte posX = 115;
+  static byte posX = 90; // zuvor 115°
   static byte posY = 90;
 
   // die x achse fängt bei der Koordinate 115° an und bewegt sich bis zu 30° 
@@ -70,7 +65,7 @@ void radarFSM_Advanced()
     {
       posX++;  
       
-      if( posX == 115)
+      if( posX == 125)
       {
         backwardX = true; 
       }
@@ -81,7 +76,7 @@ void radarFSM_Advanced()
   // Ist der X wert bei 115° angekommen wird y wieder runtergezählt bis x die koordinate 80° erreicht hat.
 
   
-      if( ( posX <= 115 && posX >= 81) && backwardY == true )   // adder >= 0 && adder <= 179
+      if( ( posX <= 125 && posX >= 81) && backwardY == true )   // adder >= 0 && adder <= 179
     {
       posY-=1;
       
@@ -95,7 +90,7 @@ void radarFSM_Advanced()
     {
       posY+=1;  
       
-      if( posX == 115 && posY <= 90 )
+      if( posX == 125 && posY <= 90 )
       {
         backwardY = true; 
       }
@@ -184,45 +179,80 @@ void radarFSM2()
 {
   static unsigned long timeShot = 0;
   unsigned long timeNow = millis();
-  static int adder = 30;
-  static boolean forward2 = true; 
+
+  static boolean backwardX= true; 
+  static boolean backwardY= true; 
   
-  if(timeNow - timeShot >= 20)
+  static byte posX = 90; // zuvor 115°
+  static byte posY = 150;
+  
+
+  // die x achse fängt bei der Koordinate 115° an und bewegt sich bis zu 30° 
+  // die y achse bleibt fürs erste zentriert beim Wert 105 °. 
+  // Der y wert soll anfangs runtergezählt werden bis x den wert 80 erreicht hat, danach soll wieder y hochgezählt werden bis x wieder bei 115° ist.
+  // Ist der X wert bei 115° angekommen wird y wieder runtergezählt bis x die koordinate 80° erreicht hat. 
+
+    if(timeNow - timeShot >= 29)
   {
     timeShot = timeNow;
     
-    if( adder < 115 && forward2 == true )   // adder >= 0 && adder <= 179
+    if( posX >= 30 && backwardX == true )   // posX > 30 && backwardX == true
     {
-      adder++;
-      if ( adder >= 115 )
-      {
-        forward2 = false; 
-      }
-    }
-    
-    else if ( forward2 == false  )
-    {
-      adder--;  
+      posX-=3;  // posX--;
       
-      if( adder == 30)
+      if ( posX <= 30 )
       {
-        forward2 = true; 
+        backwardX = false; 
       }
     }
+
     
+    else if ( backwardX == false  )
+    {
+      posX+=3; // posX++;  
+      
+      if( posX == 132) // posX == 126
+      {
+        backwardX = true; 
+      }
+    }
+
+      // x achse wird sich dauernd von 30° bis 115° bewegen. Jetzt kommt die Y achse: 
+  // Der y wert soll anfangs runtergezählt werden bis x den wert 80 erreicht hat, danach soll wieder y hochgezählt werden bis x wieder bei 30° ist.
+  // Ist der X wert bei 115° angekommen wird y wieder runtergezählt bis x die koordinate 80° erreicht hat.
+
+  
+      if(  posX == 30 && backwardY == true )   // adder >= 0 && adder <= 179
+    {
+      posY-=10;
+      
+      if ( posY == 40 ) // posY == 45
+      {
+        backwardY = false; 
+      }
+    }
+
+      else if ( posX == 132 &&  backwardY == false ) // ( posX == 126 &&  backwardY == false )
+    {
+      posY+=10;  
+      
+      if( posY == 150 ) // posX == 125 && posY >= 125 und davor auf 120
+      {
+        backwardY = true; 
+      }
+    }
+  
+
+  Serial.printf(" X Achse: %u und Y Achse: %u \n" , posX, posY);
+  servoX.write(posX);
+  servoY.write(posY);
   }
-
-  Serial.println(adder);
-  servoX.write(adder);
 }
-
-
-
 
 
 void loop() 
 {
   //radarFSM(); 
   //radarFSM_Advanced();
-  //radarFSM2();
+  radarFSM2();
 }
