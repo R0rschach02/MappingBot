@@ -1,0 +1,393 @@
+#include <Arduino.h>     // every sketch needs this
+#include <Wire.h>        // instantiate the Wire library
+#include <TFLI2C.h>      // TFLuna-I2C Library v.0.2.0
+#include <ESP32Servo.h>
+
+#define SCL_pin 22
+#define SDA_pin 21
+
+#define ServoZyklus 29
+#define SuchZyklus 2000
+
+TFLI2C tflI2C;
+
+int16_t  tfDist;    // distance in centimeters
+int16_t  tfAddr = TFL_DEF_ADR;  // Use this default I2C address or
+                                // set variable to your own value                                
+Servo myservoX;  // create servo object to control a servo
+Servo myservoY;  // create servo object to control a servo
+
+int servoPinX = 26; // servo auf x-achse:
+int servoPinY = 19; // servo auf y-achse:
+
+const int L1=2, L2=0, L_enable=15, R1=16, R2=4, R_enable=17;
+
+  //PWM setup:
+  const int kanal0 = 0;
+  const int freq = 50;
+  const int resolution = 8;
+
+  //kanal1 ist für den rechten motor:
+  const int kanal1 = 1;
+
+
+enum zustaende_t // eigener datentyp damit man dem switch case eigene zustände namen verpassen kann
+{
+  Initialisiere,
+  SucheNachWeg,
+  DreheAufDerStelle,
+  Rueckwaerts
+};
+
+void setup() {
+  // put your setup code here, to run once:
+  Wire.begin();
+  Serial.begin( 230400);  // Initalize serial port
+  // Allow allocation of all timers
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  servoX.setPeriodHertz(50);    // standard 50 hz servo
+  servoY.setPeriodHertz(50);    // standard 50 hz servo
+  servoX.attach(servoPinX, 500, 2500); // attaches the servo on pin 18 to the servo object   1000, 2000
+  servoY.attach(servoPinY, 500, 2500); // attaches the servo on pin 18 to the servo object   1000, 2000
+  // using default min/max of 1000us and 2000us
+  // different servos may require different min/max settings
+  // for an accurate 0 to 180 sweep
+
+
+  pinMode(L1, OUTPUT);  //alles output
+  pinMode(L2, OUTPUT);  //alles output
+  pinMode(L_enable, OUTPUT);  //alles output
+  pinMode(R1, OUTPUT);  //alles output
+  pinMode(R2, OUTPUT);  //alles output
+  pinMode(R_enable, OUTPUT);  //alles output
+
+    //PWM für linken motor
+  ledcSetup(kanal0, freq, resolution);
+  ledcAttachPin(L_enable, kanal0);
+  
+  //PWM für rechten motor
+  ledcSetup(kanal1, freq, resolution);
+  ledcAttachPin(R_enable, kanal1);
+
+  Wire.begin(SDA_pin, SCL_pin);           // Initalize Wire library
+
+  servoX.write(90);
+  servoY.write(90);
+  delay(2000);
+
+  
+}
+
+void RechtsKurveHinten() //Uhrzeigersinn umgedreht wäre es gegen den Uhrzeigersinn
+{
+  LinkesRadStop();
+  RechtesRadBackward();
+}
+
+void LinksKurveHinten()
+{
+  LinkesRadBackward();
+  RechtesRadStop();
+}
+
+void RechtsDrehen()
+{
+  RechtesRadBackward();
+  LinkesRadForward();
+}
+
+void LinksDrehen()
+{
+  RechtesRadForward();
+  LinkesRadBackward();
+}
+
+void LinksKurve()
+{
+  RechtesRadForward();
+  LinkesRadStop();
+}
+void RechtsKurve()
+{
+  RechtesRadStop();
+  LinkesRadForward();
+}
+
+void Rollen()
+{
+  RechtesRadRollen();
+  LinkesRadRollen();
+}
+
+void RechtesRadRollen()
+{
+  //digitalWrite(R_enable,LOW);
+  ledcWrite(kanal0, 60); //kanal0 ist für den Rechten Motor und kanal1 für den Linken Motor.
+  digitalWrite(R1,LOW);
+  digitalWrite(R2,LOW);
+}
+
+void LinkesRadRollen()
+{
+  //digitalWrite(L_enable,LOW);
+  ledcWrite(kanal1, 60);
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,LOW);
+}
+
+void Stopp()
+{
+  LinkesRadStop();
+  RechtesRadStop();
+}
+
+void LinkesRadStop()
+{
+  digitalWrite(L_enable,HIGH);
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,LOW);
+}
+
+void RechtesRadStop()
+{
+  digitalWrite(R_enable,HIGH);
+  digitalWrite(R1,LOW);
+  digitalWrite(R2,LOW);
+}
+
+void Backward()
+{
+  LinkesRadBackward();
+  RechtesRadBackward();
+}
+
+void Forward()
+{
+  LinkesRadForward();
+  RechtesRadForward();
+}
+
+void LinkesRadForward()
+{
+  //digitalWrite(L_enable,HIGH);
+  ledcWrite(kanal0, 120); 
+  digitalWrite(L1,LOW);
+  digitalWrite(L2,HIGH);
+}
+
+void LinkesRadBackward()
+{
+  //digitalWrite(L_enable,HIGH);
+  ledcWrite(kanal0, 140); 
+  digitalWrite(L1,HIGH);
+  digitalWrite(L2,LOW);
+}
+
+void RechtesRadForward()
+{
+  //digitalWrite(R_enable,HIGH);
+  ledcWrite(kanal1, 120); 
+  digitalWrite(R1,LOW);
+  digitalWrite(R2,HIGH);
+}
+
+void RechtesRadBackward()
+{
+  //digitalWrite(R_enable,HIGH);
+  ledcWrite(kanal1, 140); 
+  digitalWrite(R1,HIGH);
+  digitalWrite(R2,LOW);
+}
+
+// Noch eine Kleine RadarFunktion:
+
+void radarFSM()
+{
+  static unsigned long timeShot = 0;
+  unsigned long timeNow = millis();
+
+  static boolean forwardX= true; 
+  static boolean forwardY= true; 
+  
+  static int posX = 30;
+  static int posY = 90;
+  
+  if(timeNow - timeShot >= 25)
+  {
+    timeShot = timeNow;
+    
+    if( posX <  140 && forwardX == true )   // adder >= 0 && adder <= 179
+    {
+      posX++;
+      
+      if ( posX >= 140 )
+      {
+        forwardX = false; 
+      }
+    }
+    
+    else if ( forwardX == false  )
+    {
+      posX--;  
+      
+      if( posX == 30)
+      {
+        forwardX = true; 
+      }
+    }
+
+// Für bewegung entlang der Y Achse: 
+
+    if( posY < 115 && forwardY == true )   // adder >= 0 && adder <= 179
+    {
+      posY++;
+      
+      if ( posY >= 90 )
+      {
+        forwardY = false; 
+      }
+    }
+
+    else if ( forwardY == false  )
+    {
+      posY--;  
+      
+      if( posY == 30)
+      {
+        forwardY = true; 
+      }
+    }    
+  }
+ 
+  //Serial.printf(" X Achse: %u und Y Achse: %u \n" , posX, posY);
+  servoX.write(posX);
+  servoY.write(posY);
+}
+
+
+
+// Motoren Funktionen wurden deklariert, können jetzt in der FSM verwendet werden:
+
+zustaende_t DistAndMoveServoFSM()
+{
+  
+  if( tflI2C.getData( tfDist, tfAddr)) // If read okay...
+  {  
+  
+  static unsigned long vergangeneZeitDistanz = 0;  // gemerkte Zeit wann man grundsätzlich zum DistanzMess case geht
+  static unsigned long vergangeneZeitDistanzSteps = 0; // gemerkte Zeit wann man grundsätzlich zur Schleife vom DistanzMessSensor geht
+  unsigned long zeitJetzt = millis(); // die millis funktion misst die aktuelle zeit 
+
+  //Lokale Variablen für MaxDistAlgorithmus
+
+  static int16_t tfDistArray[16]; 
+  static int16_t maxIndex = 0;  // -1 
+  static int16_t maxValue = 0;
+
+  for( int16_t i = 0; i < 16; i++)    // In der Funktion wird ständig nach dem größten Wert gesucht 
+        {
+          tfDistArray[i] = tfDist;
+          maxIndex++;                                                                                                                                   
+          
+           if ( tfDistArray[maxIndex] > tfDistArray[i])  
+            {
+               maxValue = tfDistArray[maxIndex];
+               maxIndex = i;
+            }
+                       
+        }
+
+  static zustaende_t aktuellerZustand = Initialisiere;
+
+  static int16_t MerkeHindernis = 0; // Bei jedem zweiten Mal soll er anstatt rückwärts, auf der stelle drehen 
+
+  
+
+  switch (aktuellerZustand)
+    {
+      case Initialisiere:
+      
+        servoX.write(90);
+        servoY.write(90);
+        
+        Serial.print("Aktuelle Distanz: \n");
+        Serial.println(tfDist);
+        Forward();
+        
+
+        if( tfDist <= 30 )
+        {
+        Rollen();
+        Stopp();
+        Serial.println("Hindernis liegt hervor, suche nach neuem Weg");
+        Serial.printf("Aktuelle position beträgt: %d \n ", pos);
+        aktuellerZustand = SucheNachWeg; // Im nächsten Zustand soll sich der Servo von links nach rechts bewegen UND distanzwerte messen inklusive maxWert Algo
+        }
+        
+        break;
+  
+      case SucheNachWeg: 
+
+       
+        //RechtsDrehen();
+        //Serial.println("Drehe auf der Stelle");
+        RadarSearchDistance();
+
+
+        if ( tfDist < 20 )
+        {
+          Backward();
+          MerkeHindernis += 1;
+          //Serial.println("Hindernis erkannt");
+
+          if ( zeitJetzt - vergangeneZeitDistanz >= 1000 )
+          {
+            vergangeneZeitDistanz = zeitJetzt;
+            aktuellerZustand = Initialisiere;
+          }
+          
+  
+          else if ( MerkeHindernis % 2 == 0 )
+          {
+            //Serial.println("Hindernis erneut erkannt");
+            //LinksDrehen();
+            RadarSearchDistance();
+            if ( tfDist > 30 && zeitJetzt - vergangeneZeitDistanz >= SuchZyklus )
+            {
+              vergangeneZeitDistanz = zeitJetzt;
+              aktuellerZustand = Initialisiere ;
+            }
+          }
+
+            else if ( MerkeHindernis % 4 == 0 )
+          {
+            Serial.println("Versuche neues Ziel zu finden, mindestens 2 hindernisse erkannt. ");
+            //RechtsDrehen();
+            RadarSearchDistance();
+            if ( tfDist > 45 && zeitJetzt - vergangeneZeitDistanz >= SuchZyklus )
+            {
+              vergangeneZeitDistanz = zeitJetzt;
+              aktuellerZustand = Initialisiere ;
+            }
+          }
+        }
+
+        break;
+
+      return aktuellerZustand;
+      
+    } //geschlossene klammer vom zustandsautomat, der wird nur ausgeführt wenn der distanzsensor ausgelesen werden kann! 
+
+  } //geschlossene klammer für if bedingung vom distanz sensor 
+}
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+  //DistAndMoveServoFSM();
+  RadarSearchDistance();
+}
