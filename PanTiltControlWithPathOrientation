@@ -249,8 +249,8 @@ void radarFSM2() // Stößt nicht an Kante beim bewegen, x und y bewegen sich je
   static boolean backwardX= true; 
   static boolean backwardY= true; 
   
-  static byte posX = 90; // zuvor 115°
-  static byte posY = 150;
+  static byte posX = 30; // zuvor 115°
+  static byte posY = 85;
 
 
   
@@ -260,25 +260,25 @@ void radarFSM2() // Stößt nicht an Kante beim bewegen, x und y bewegen sich je
 
     // Schwenken auf X-Achse: Von 90° auf 30° mit 3 dekrementiert. 20 schleifendurchläufe bis zu Richtungswechsel. 
     
-    if( posX >= 30 && backwardX == true )   // posX > 30 && backwardX == true
+    if( posX < 115 && forwardX == true )   // posX > 30 && backwardX == true
     {
-      posX-=3;  // posX--;
+      posX++;  // posX--;
       
-      if ( posX <= 30 )
+      if ( posX >= 115 )
       {
-        backwardX = false; 
+        forwardX = false; 
       }
     }
 
     // Schwenken auf X-Achse: Von 30° auf 132° mit 3 inkrementiert. 44 schleifendurchläufe bis zu Richtungswechsel.
     
-    else if ( backwardX == false  )
+    else if ( forwardX == false  )
     {
-      posX+=3; // posX++;  
+      posX--; // posX++;  
       
-      if( posX == 132) // posX == 126
+      if( posX == 30) // posX == 126
       {
-        backwardX = true; 
+        forwardX = true; 
       }
     }
 
